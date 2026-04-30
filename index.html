@@ -2,80 +2,78 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Reaction System Pro</title>
+    <title>Reaction System Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: #0d1117; color: #e6edf3; font-family: sans-serif; text-align: center; margin: 0; }
-        .container { max-width: 900px; margin: auto; padding: 20px; }
-        .grid { display: flex; gap: 15px; justify-content: center; margin: 20px 0; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; flex: 1; }
-        .val { font-size: 2.2em; font-weight: bold; color: #58a6ff; display: block; font-family: monospace; }
-        .label { font-size: 0.8em; color: #8b949e; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        :root { --blue: #58a6ff; --green: #3fb950; --red: #f85149; --bg: #0d1117; --card: #161b22; --border: #30363d; }
+        body { background: var(--bg); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
         
-        #chart-container { background: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 10px; height: 320px; margin-top: 20px; }
-        
-        .led-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 110px; margin: 20px auto; }
-        .led { width: 45px; height: 45px; background: #21262d; border: 2px solid #30363d; border-radius: 8px; transition: 0.3s; }
-        .led.bad { background: #f85149; box-shadow: 0 0 20px #f85149; border-color: #ff7b72; }
-        
-        button { background: #238636; color: white; border: none; padding: 15px 30px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1.1em; transition: 0.2s; }
-        button:hover { background: #2ea043; transform: scale(1.02); }
-        #debug { font-family: monospace; color: #8b949e; font-size: 0.75em; margin-top: 30px; padding: 10px; border-top: 1px solid #30363d; }
+        button { background: #238636; color: white; border: 1px solid rgba(240,246,252,0.1); padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 16px; margin-bottom: 20px; }
+        button:hover { background: #2ea043; }
+
+        .grid { display: flex; gap: 15px; margin-bottom: 20px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 15px; flex: 1; min-width: 150px; }
+        .label { display: block; font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; }
+        .val { font-size: 28px; font-family: monospace; font-weight: bold; color: var(--blue); }
+
+        .main-layout { display: flex; gap: 20px; }
+        .chart-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; flex: 3; height: 350px; }
+        .led-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        .led-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+        .led { width: 50px; height: 50px; background: #21262d; border: 2px solid var(--border); border-radius: 8px; transition: 0.3s; }
+        .led.bad { background: var(--red); box-shadow: 0 0 20px var(--red); border-color: #ff7b72; }
+
+        #debug { margin-top: 30px; font-family: monospace; font-size: 11px; color: #8b949e; border-top: 1px solid var(--border); padding-top: 10px; word-break: break-all; }
     </style>
 </head>
 <body>
+
     <div class="container">
         <h1>REACTION DASHBOARD</h1>
         <button id="btnConnect">PŘIPOJIT MICRO:BIT</button>
 
         <div class="grid">
-            <div class="card"><span class="label">Poslední</span><span id="vLast" class="val">--</span></div>
+            <div class="card"><span class="label">Poslední kolo</span><span id="vLast" class="val">--</span></div>
             <div class="card"><span class="label">Průměr</span><span id="vAvg" class="val">--</span></div>
-            <div class="card"><span class="label">Nejrychlejší</span><span id="vMin" class="val" style="color:#3fb950">--</span></div>
-            <div class="card"><span class="label">Nejpomalejší</span><span id="vMax" class="val" style="color:#f85149">--</span></div>
+            <div class="card"><span class="label">Nejrychlejší</span><span id="vMin" class="val" style="color:var(--green)">--</span></div>
+            <div class="card"><span class="label">Nejpomalejší</span><span id="vMax" class="val" style="color:var(--red)">--</span></div>
         </div>
 
-        <div style="display:flex; gap:20px; align-items: stretch;">
-            <div id="chart-container" style="flex:3;">
-                <canvas id="reactionChart"></canvas>
+        <div class="main-layout">
+            <div class="chart-box">
+                <canvas id="myChart"></canvas>
             </div>
-            <div class="card" style="flex:1; display: flex; flex-direction: column; justify-content: center;">
+            <div class="led-box">
                 <span class="label">Nejpomalejší LED</span>
                 <div class="led-grid">
                     <div id="l0" class="led"></div><div id="l1" class="led"></div>
                     <div id="l2" class="led"></div><div id="l3" class="led"></div>
                 </div>
-                <span id="ledDesc" style="font-size:0.9em; font-weight: bold; color:#f85149;">- čekám na hru -</span>
+                <span id="ledDesc" style="color:var(--red); font-weight:bold; font-size:14px;">ČEKÁM NA DATA</span>
             </div>
         </div>
-        <div id="debug">Status: Odpojeno</div>
+
+        <div id="debug">Poslední RAW data: Čekám na spárování...</div>
     </div>
 
     <script>
         let chart;
-        const ctx = document.getElementById('reactionChart').getContext('2d');
+        const ctx = document.getElementById('myChart').getContext('2d');
 
-        // Inicializace grafu
+        // Nastavení grafu
         chart = new Chart(ctx, {
             type: 'line',
             data: { 
-                labels: ['Kolo 1', '2', '3', '4', '5', '6', '7', '8'], 
-                datasets: [{ 
-                    label: 'Reakce (ms)', 
-                    data: [], 
-                    borderColor: '#58a6ff', 
-                    borderWidth: 3,
-                    pointBackgroundColor: '#58a6ff',
-                    tension: 0.3, 
-                    fill: true, 
-                    backgroundColor: 'rgba(88, 166, 255, 0.1)' 
-                }] 
+                labels: ['1','2','3','4','5','6','7','8'], 
+                datasets: [{ label: 'ms', data: [], borderColor: '#58a6ff', tension: 0.3, fill: true, backgroundColor: 'rgba(88, 166, 255, 0.1)', borderWidth: 3 }] 
             },
             options: { 
                 maintainAspectRatio: false, 
                 scales: { 
-                    y: { beginAtZero: true, min: 0, grid: { color: '#30363d' } },
-                    x: { grid: { display: false } }
+                    y: { beginAtZero: true, min: 0, grid: { color: '#30363d' }, ticks: { color: '#8b949e' } },
+                    x: { grid: { display: false }, ticks: { color: '#8b949e' } }
                 },
                 plugins: { legend: { display: false } }
             }
@@ -86,7 +84,6 @@
                 const port = await navigator.serial.requestPort();
                 await port.open({ baudRate: 115200 });
                 document.getElementById('btnConnect').innerText = "✅ PŘIPOJENO";
-                document.getElementById('debug').innerText = "Čekám na data z micro:bitu...";
                 
                 const decoder = new TextDecoderStream();
                 port.readable.pipeTo(decoder.writable);
@@ -97,66 +94,52 @@
                     const { value, done } = await reader.read();
                     if (done) break;
                     buffer += value;
-                    
-                    // Rozdělíme buffer na řádky
                     if (buffer.includes("\n")) {
                         let lines = buffer.split("\n");
-                        // Zpracujeme všechny kompletní řádky kromě posledního (který může být neúplný)
                         for (let i = 0; i < lines.length - 1; i++) {
-                            let line = lines[i].trim();
-                            if (line.length > 0) {
-                                processLine(line);
-                            }
+                            if (lines[i].trim()) processLine(lines[i].trim());
                         }
                         buffer = lines[lines.length - 1];
                     }
                 }
-            } catch (err) { 
-                document.getElementById('debug').innerText = "Chyba: " + err; 
-            }
+            } catch (err) { document.getElementById('debug').innerText = "Chyba: " + err; }
         });
 
         function processLine(line) {
-            // Debug výpis
             document.getElementById('debug').innerText = "Poslední RAW data: " + line;
-
-            // Hledáme řetězec DATA: kdekoli v řádku (prevence proti šumu)
             if (!line.includes("DATA:")) return;
 
             try {
-                // Očistíme řádek od případného bordelu před "DATA:"
-                let dataPart = line.substring(line.indexOf("DATA:") + 5);
-                let mainParts = dataPart.split("|");
-                
-                // Část 1: Statistiky (last, avg, min, max, badID)
-                let stats = mainParts[0].split(",").map(n => parseInt(n.trim()));
-                
-                // Část 2: Jednotlivá kola pro graf
-                let reactions = mainParts[1].split(",").filter(x => x.trim() !== "").map(n => parseInt(n.trim()));
+                // Rozsekání řádku přesně podle toho, co posílá Micro:bit
+                let dataPart = line.split("DATA:")[1].trim();
+                let sections = dataPart.split("|");
+                if (sections.length < 2) return;
 
-                if (stats.length >= 5) {
-                    // 1. Aktualizace karet
+                // Vyčištění čísel (odstraní prázdné hodnoty a čárky navíc)
+                let stats = sections[0].split(",").map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+                let times = sections[1].split(",").map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+
+                if (stats.length >= 4) {
                     document.getElementById('vLast').innerText = stats[0] + " ms";
                     document.getElementById('vAvg').innerText = stats[1] + " ms";
                     document.getElementById('vMin').innerText = stats[2] + " ms";
                     document.getElementById('vMax').innerText = stats[3] + " ms";
+                }
 
-                    // 2. Vizualizace LED (0-3)
+                if (stats.length >= 5) {
                     for(let i=0; i<4; i++) document.getElementById('l'+i).classList.remove('bad');
                     let badId = stats[4];
                     if (badId >= 0 && badId <= 3) {
                         document.getElementById('l'+badId).classList.add('bad');
                         document.getElementById('ledDesc').innerText = "POZICE LED " + (badId + 1);
                     }
+                }
 
-                    // 3. Aktualizace grafu
-                    chart.data.datasets[0].data = reactions;
+                if (times.length > 0) {
+                    chart.data.datasets[0].data = times;
                     chart.update();
                 }
-            } catch (e) {
-                console.error("Chyba při parsování:", e);
-                document.getElementById('debug').innerText = "Chyba v datech: " + line;
-            }
+            } catch (e) { console.error("Chyba:", e); }
         }
     </script>
 </body>
