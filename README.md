@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STATISTIKA REAKCÍ</title>
+    <title>STATISTIKA</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
@@ -11,9 +11,12 @@
             --neon-green: #00ff41;
             --neon-blue: #00d4ff;
             --neon-red: #ff3131;
-            --dark-bg: #0a0b10;
+            --dark-bg: #0d1117;
             --card-bg: #161b22;
         }
+
+        /* Jemné posouvání stránky */
+        html { scroll-behavior: smooth; }
 
         body {
             background-color: var(--dark-bg);
@@ -21,32 +24,41 @@
             font-family: 'Rajdhani', sans-serif;
             margin: 0;
             padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Animace pro náběh stránky */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         header {
-            padding: 30px;
+            padding: 40px 20px;
             text-align: center;
-            background: rgba(22, 27, 34, 0.9);
-            border-bottom: 2px solid var(--neon-blue);
+            background: linear-gradient(180deg, #161b22 0%, var(--dark-bg) 100%);
+            border-bottom: 1px solid #30363d;
+            animation: fadeInUp 0.8s ease-out;
         }
 
         h1 {
             font-family: 'Orbitron', sans-serif;
-            letter-spacing: 8px;
+            letter-spacing: 12px;
             margin: 0;
             color: white;
-            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
         }
 
         .container {
-            max-width: 1200px;
-            margin: 30px auto;
+            max-width: 1100px;
+            margin: -20px auto 50px;
             padding: 0 20px;
+            animation: fadeInUp 1s ease-out;
         }
 
         .main-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -54,25 +66,34 @@
         .card {
             background: var(--card-bg);
             border: 1px solid #30363d;
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 25px;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+            border-color: var(--neon-blue);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .card h3 {
             margin: 0;
             color: #8b949e;
-            font-size: 14px;
-            letter-spacing: 1px;
+            font-size: 13px;
+            letter-spacing: 2px;
             text-transform: uppercase;
         }
 
         .card .value {
-            font-size: 40px;
+            font-size: 45px;
             font-weight: 700;
-            margin: 10px 0;
+            margin: 15px 0;
             font-family: 'Orbitron', sans-serif;
+            transition: 0.3s;
         }
 
         #lastTime { color: white; }
@@ -80,31 +101,47 @@
         #fastestTime { color: var(--neon-green); }
         #slowestTime { color: var(--neon-red); }
 
-        .chart-container {
+        .chart-section {
             background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 25px;
             border: 1px solid #30363d;
-            height: 350px;
+            height: 400px;
+            animation: fadeInUp 1.2s ease-out;
         }
 
         .btn-connect {
-            background: var(--neon-blue);
-            color: black;
-            border: none;
-            padding: 15px 40px;
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            padding: 15px 45px;
             font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            border-radius: 5px;
-            margin: 20px auto;
+            border-radius: 8px;
+            margin: 30px auto;
             display: block;
             transition: 0.3s;
+            text-transform: uppercase;
         }
 
         .btn-connect:hover {
-            box-shadow: 0 0 20px var(--neon-blue);
-            transform: scale(1.05);
+            background: var(--neon-blue);
+            color: black;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+        }
+
+        /* Pulsování pro "živý" efekt */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        .live-dot {
+            height: 8px; width: 8px; background: var(--neon-green);
+            border-radius: 50%; display: inline-block; margin-right: 10px;
+            animation: pulse 1.5s infinite;
         }
     </style>
 </head>
@@ -120,26 +157,26 @@
         <div class="card">
             <h3>Poslední</h3>
             <div class="value" id="lastTime">0</div>
-            <span>ms</span>
+            <span style="color:#58a6ff">ms</span>
         </div>
         <div class="card">
             <h3>Průměr</h3>
             <div class="value" id="avgTime">0</div>
-            <span>ms</span>
+            <span style="color:#58a6ff">ms</span>
         </div>
         <div class="card">
             <h3>Nejrychlejší</h3>
             <div class="value" id="fastestTime">0</div>
-            <span>ms</span>
+            <span style="color:#58a6ff">ms</span>
         </div>
         <div class="card">
             <h3>Nejpomalejší</h3>
             <div class="value" id="slowestTime">0</div>
-            <span>ms</span>
+            <span style="color:#58a6ff">ms</span>
         </div>
     </div>
 
-    <div class="chart-container">
+    <div class="chart-section">
         <canvas id="reactionChart"></canvas>
     </div>
 </div>
@@ -158,10 +195,12 @@
             datasets: [{
                 data: [],
                 borderColor: '#00d4ff',
-                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                backgroundColor: 'rgba(0, 212, 255, 0.05)',
                 borderWidth: 3,
                 fill: true,
-                tension: 0.3
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#00d4ff'
             }]
         },
         options: {
@@ -169,7 +208,10 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: { grid: { color: '#30363d' }, ticks: { color: '#8b949e' } },
+                y: { 
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#8b949e', font: { family: 'Rajdhani' } }
+                },
                 x: { display: false }
             }
         }
@@ -179,7 +221,9 @@
         try {
             const port = await navigator.serial.requestPort();
             await port.open({ baudRate: 115200 });
-            document.getElementById('connectBtn').style.display = 'none';
+            document.getElementById('connectBtn').innerHTML = '<span class="live-dot"></span>PROPOJENO';
+            document.getElementById('connectBtn').style.borderColor = 'var(--neon-green)';
+            document.getElementById('connectBtn').style.color = 'var(--neon-green)';
 
             const decoder = new TextDecoderStream();
             port.readable.pipeTo(decoder.writable);
@@ -188,12 +232,12 @@
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
-                process(value);
+                processData(value);
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Chyba připojení:", e); }
     });
 
-    function process(chunk) {
+    function processData(chunk) {
         lineBuffer += chunk;
         let lines = lineBuffer.split("\r\n");
         lineBuffer = lines.pop();
@@ -201,16 +245,14 @@
         lines.forEach(line => {
             if (line.includes('TIME:')) {
                 let val = parseInt(line.split(':')[1]);
-                update(val);
+                if(!isNaN(val)) updateStats(val);
             }
         });
     }
 
-    function update(val) {
-        // Poslední čas
+    function updateStats(val) {
         document.getElementById('lastTime').innerText = val;
 
-        // Statistiky
         times.push(val);
         if (val < best) best = val;
         if (val > worst) worst = val;
@@ -221,10 +263,9 @@
         document.getElementById('slowestTime').innerText = worst;
         document.getElementById('avgTime').innerText = avg;
 
-        // Graf
         chart.data.labels.push("");
         chart.data.datasets[0].data.push(val);
-        if (chart.data.datasets[0].data.length > 20) {
+        if (chart.data.datasets[0].data.length > 25) {
             chart.data.labels.shift();
             chart.data.datasets[0].data.shift();
         }
