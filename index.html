@@ -2,189 +2,44 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STATISTIKA</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --neon-green: #00ff41;
-            --neon-blue: #00d4ff;
-            --neon-red: #ff3131;
-            --dark-bg: #0d1117;
-            --card-bg: #161b22;
-        }
-
-        body {
-            background-color: var(--dark-bg);
-            color: white;
-            font-family: 'Rajdhani', sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        header {
-            padding: 40px 20px;
-            text-align: center;
-            background: #161b22;
-            border-bottom: 1px solid #30363d;
-            animation: fadeInUp 0.6s ease-out;
-        }
-
-        h1 {
-            font-family: 'Orbitron', sans-serif;
-            letter-spacing: 12px;
-            margin: 0;
-            text-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
-            animation: fadeInUp 0.9s ease-out;
-        }
-
-        /* Statistiky na jednom řádku */
-        .main-stats {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: nowrap; /* Drží řádek */
-        }
-
-        .card {
-            flex: 1;
-            background: var(--card-bg);
-            border: 1px solid #30363d;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            transition: 0.3s ease;
-        }
-
-        .card:hover {
-            transform: scale(1.03);
-            border-color: var(--neon-blue);
-        }
-
-        .card h3 {
-            margin: 0;
-            color: #8b949e;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .card .value {
-            font-size: 32px;
-            font-weight: 700;
-            margin: 10px 0;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        #lastTime { color: white; }
-        #avgTime { color: var(--neon-blue); }
-        #fastestTime { color: var(--neon-green); }
-        #slowestTime { color: var(--neon-red); }
-
-        .chart-section {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #30363d;
-            height: 400px;
-            animation: fadeInUp 1.2s ease-out;
-        }
-
-        .btn-connect {
-            background: transparent;
-            color: var(--neon-blue);
-            border: 2px solid var(--neon-blue);
-            padding: 12px 30px;
-            font-family: 'Orbitron', sans-serif;
-            cursor: pointer;
-            border-radius: 4px;
-            margin: 20px auto;
-            display: block;
-            transition: 0.3s;
-        }
-
-        .btn-connect:hover {
-            background: var(--neon-blue);
-            color: black;
-            box-shadow: 0 0 20px var(--neon-blue);
-        }
-
-        .live-dot {
-            height: 8px; width: 8px; background: var(--neon-green);
-            border-radius: 50%; display: inline-block; margin-right: 10px;
-            box-shadow: 0 0 8px var(--neon-green);
-        }
+        :root { --blue: #00d4ff; --green: #00ff41; --red: #ff3131; --bg: #0d1117; }
+        body { background: var(--bg); color: white; font-family: 'Rajdhani', sans-serif; text-align: center; margin: 0; }
+        header { padding: 30px; border-bottom: 1px solid #30363d; animation: fadeIn 1s; }
+        h1 { font-family: 'Orbitron'; letter-spacing: 10px; margin: 0; }
+        .stats-row { display: flex; justify-content: center; gap: 20px; padding: 40px 20px; animation: fadeIn 1.5s; }
+        .card { background: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 12px; min-width: 200px; transition: 0.3s; }
+        .card:hover { border-color: var(--blue); transform: translateY(-5px); }
+        .label { color: #8b949e; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
+        .value { font-family: 'Orbitron'; font-size: 40px; margin: 15px 0; }
+        #val-last { color: white; } #val-avg { color: var(--blue); } #val-fast { color: var(--green); } #val-slow { color: var(--red); }
+        .btn { background: transparent; color: var(--blue); border: 2px solid var(--blue); padding: 15px 30px; cursor: pointer; font-family: 'Orbitron'; border-radius: 5px; margin-top: 20px; }
+        .btn:hover { background: var(--blue); color: black; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
-
-<header>
-    <h1>STATISTIKA</h1>
-    <button class="btn-connect" id="connectBtn">PŘIPOJIT ZAŘÍZENÍ</button>
-</header>
-
-<div class="container">
-    <div class="main-stats">
-        <div class="card"><h3>Poslední</h3><div class="value" id="lastTime">0</div><span>ms</span></div>
-        <div class="card"><h3>Průměr</h3><div class="value" id="avgTime">0</div><span>ms</span></div>
-        <div class="card"><h3>Nejrychlejší</h3><div class="value" id="fastestTime">0</div><span>ms</span></div>
-        <div class="card"><h3>Nejpomalejší</h3><div class="value" id="slowestTime">0</div><span>ms</span></div>
+    <header>
+        <h1>STATISTIKA</h1>
+        <button class="btn" id="connect">PŘIPOJIT MICRO:BIT</button>
+    </header>
+    <div class="stats-row">
+        <div class="card"><div class="label">Poslední</div><div class="value" id="val-last">0</div>ms</div>
+        <div class="card"><div class="label">Průměr</div><div class="value" id="val-avg">0</div>ms</div>
+        <div class="card"><div class="label">Nejrychlejší</div><div class="value" id="val-fast">0</div>ms</div>
+        <div class="card"><div class="label">Nejpomalejší</div><div class="value" id="val-slow">0</div>ms</div>
     </div>
 
-    <div class="chart-section">
-        <canvas id="reactionChart"></canvas>
-    </div>
-</div>
-
-<script>
-    let times = [];
-    let lineBuffer = "";
-
-    const ctx = document.getElementById('reactionChart').getContext('2d');
-    const chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                data: [],
-                borderColor: '#00d4ff',
-                backgroundColor: 'rgba(0, 212, 255, 0.05)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { grid: { color: '#333' }, ticks: { color: '#888' } },
-                x: { display: false }
-            }
-        }
-    });
-
-    document.getElementById('connectBtn').addEventListener('click', async () => {
-        try {
+    <script>
+        let lineBuffer = "";
+        document.getElementById('connect').addEventListener('click', async () => {
             const port = await navigator.serial.requestPort();
             await port.open({ baudRate: 115200 });
-            document.getElementById('connectBtn').innerHTML = '<span class="live-dot"></span>AKTIVNÍ';
-
+            document.getElementById('connect').innerText = "PROPOJENO";
+            
             const decoder = new TextDecoderStream();
             port.readable.pipeTo(decoder.writable);
             const reader = decoder.readable.getReader();
@@ -192,47 +47,22 @@
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
-                
                 lineBuffer += value;
                 let lines = lineBuffer.split("\n");
                 lineBuffer = lines.pop();
 
                 for (let line of lines) {
-                    let cleanLine = line.trim();
-                    if (cleanLine.startsWith("DATA:")) {
-                        // Očekáváme formát DATA:poslední,průměr,nejrychlejší,nejpomalejší
-                        let rawData = cleanLine.split(":")[1];
-                        let parts = rawData.split(",");
-                        
-                        if (parts.length === 4) {
-                            updateUI(
-                                parseInt(parts[0]), 
-                                parseInt(parts[1]), 
-                                parseInt(parts[2]), 
-                                parseInt(parts[3])
-                            );
-                        }
+                    if (line.trim().startsWith("FINAL:")) {
+                        let data = line.trim().split(":")[1].split(",");
+                        // Přesné propsání hodnot z Micro:bitu
+                        document.getElementById('val-last').innerText = data[0];
+                        document.getElementById('val-avg').innerText = data[1];
+                        document.getElementById('val-fast').innerText = data[2];
+                        document.getElementById('val-slow').innerText = data[3];
                     }
                 }
             }
-        } catch (e) { console.log(e); }
-    });
-
-    function updateUI(last, avg, fast, slow) {
-        document.getElementById('lastTime').innerText = last;
-        document.getElementById('avgTime').innerText = avg;
-        document.getElementById('fastestTime').innerText = fast;
-        document.getElementById('slowestTime').innerText = slow;
-
-        // Přidáme poslední čas do grafu
-        chart.data.labels.push("");
-        chart.data.datasets[0].data.push(last);
-        if (chart.data.datasets[0].data.length > 15) {
-            chart.data.labels.shift();
-            chart.data.datasets[0].data.shift();
-        }
-        chart.update();
-    }
-</script>
+        });
+    </script>
 </body>
 </html>
