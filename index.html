@@ -214,10 +214,21 @@
         .data-log div {
             padding: 5px;
             border-bottom: 1px solid #e0e0e0;
+            word-break: break-all;
         }
 
         .data-log div:last-child {
             border-bottom: none;
+        }
+
+        .debug {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.8em;
+            max-height: 150px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -298,6 +309,7 @@
             <div class="data-log" id="dataLog">
                 <div>Čekání na připojení...</div>
             </div>
+            <div class="debug" id="debugLog" style="display:none;"></div>
         </div>
 
         <div class="info-text">
@@ -320,6 +332,7 @@
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const dataLog = document.getElementById('dataLog');
+        const debugLog = document.getElementById('debugLog');
         const resetBtn = document.getElementById('resetBtn');
 
         let chart = null;
@@ -436,6 +449,39 @@
             }
         }
 
+        // Debug log
+        function addDebug(message) {
+            const debugEntry = document.createElement('div');
+            debugEntry.textContent = message;
+            debugLog.insertBefore(debugEntry, debugLog.firstChild);
+            
+            // Omezit
+            while (debugLog.children.length > 30) {
+                debugLog.removeChild(debugLog.lastChild);
+            }
+        }
+
+        // Parsování dat - ROBUSTNÍ VERZE
+        function parseData(line) {
+            if (!line || line.length < 10) return null;
+
+            // Hledej LED: a TIME: kdekoliv v řádku
+            const ledMatch = line.match(/LED[:\s]*(\d+)/i);
+            const timeMatch = line.match(/TIME[:\s]*(\d+)/i);
+
+            if (ledMatch && timeMatch) {
+                const ledNum = parseInt(ledMatch[1]);
+                const time = parseInt(timeMatch[1]);
+
+                // Validace
+                if (ledNum >= 1 && ledNum <= 4 && time > 0 && time < 5000) {
+                    return { ledNum: ledNum - 1, time: time };
+                }
+            }
+
+            return null;
+        }
+
         // Připojení k USB
         connectBtn.addEventListener('click', async () => {
             try {
@@ -447,6 +493,7 @@
                 statusDot.classList.add('connected');
                 statusText.textContent = 'Připojeno';
                 dataLog.innerHTML = '';
+                debugLog.innerHTML = '';
                 addLog('✅ Připojeno k micro:bitu!');
                 readSerial();
             } catch (err) {
@@ -454,7 +501,7 @@
             }
         });
 
-        // Čtení sériových dat
+        // Čtení sériových dat - VYLEPŠENÁ VERZE
         async function readSerial() {
             try {
                 while (port.readable && isConnected) {
@@ -467,34 +514,31 @@
                             const text = new TextDecoder().decode(value);
                             buffer += text;
                             
-                            // Zpracování řádků
-                            let newlineIndex;
-                            while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-                                const line = buffer.substring(0, newlineIndex).trim();
-                                buffer = buffer.substring(newlineIndex + 1);
+                            addDebug(`Raw: ${JSON.stringify(text)}`);
+
+                            // Zpracování po řádcích
+                            let lines = buffer.split(/[\r\n]+/);
+                            buffer = lines.pop() || ''; // Poslední neúplný řádek zůstane v bufferu
+
+                            for (const line of lines) {
+                                const trimmed = line.trim();
+                                if (!trimmed) continue;
+
+                                addDebug(`Parse: "${trimmed}"`);
+
+                                const data = parseData(trimmed);
                                 
-                                if (!line) continue;
-                                
-                                console.log('Přijaté:', line);
-                                
-                                // Parsování LED a času
-                                const ledMatch = line.match(/LED:(\d+)/);
-                                const timeMatch = line.match(/TIME:(\d+)/);
-                                
-                                if (ledMatch && timeMatch) {
-                                    const ledNum = parseInt(ledMatch[1]) - 1;
-                                    const time = parseInt(timeMatch[1]);
+                                if (data) {
+                                    addDebug(`✅ LED:${data.ledNum + 1} TIME:${data.time}`);
                                     
-                                    console.log('LED:', ledNum + 1, 'Čas:', time);
+                                    allTimes.push(data.time);
+                                    ledTimes[data.ledNum].push(data.time);
+                                    ledCounts[data.ledNum]++;
                                     
-                                    if (ledNum >= 0 && ledNum < 4) {
-                                        allTimes.push(time);
-                                        ledTimes[ledNum].push(time);
-                                        ledCounts[ledNum]++;
-                                        
-                                        addLog(`🎯 LED ${ledNum + 1}: ${time}ms`);
-                                        updateStats();
-                                    }
+                                    addLog(`🎯 LED ${data.ledNum + 1}: ${data.time}ms`);
+                                    updateStats();
+                                } else {
+                                    addDebug(`❌ Neparoval se: "${trimmed}"`);
                                 }
                             }
                         }
