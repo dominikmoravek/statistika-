@@ -2,145 +2,535 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Reaction System Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro:bit Reaction Time Stats</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --blue: #58a6ff; --green: #3fb950; --red: #f85149; --bg: #0d1117; --card: #161b22; --border: #30363d; }
-        body { background: var(--bg); color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; }
-        
-        button { background: #238636; color: white; border: 1px solid rgba(240,246,252,0.1); padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 16px; margin-bottom: 20px; }
-        button:hover { background: #2ea043; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-        .grid { display: flex; gap: 15px; margin-bottom: 20px; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 15px; flex: 1; min-width: 150px; }
-        .label { display: block; font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; }
-        .val { font-size: 28px; font-family: monospace; font-weight: bold; color: var(--blue); }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
 
-        .main-layout { display: flex; gap: 20px; }
-        .chart-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; flex: 3; height: 350px; }
-        .led-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-        .led-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
-        .led { width: 50px; height: 50px; background: #21262d; border: 2px solid var(--border); border-radius: 8px; transition: 0.3s; }
-        .led.bad { background: var(--red); box-shadow: 0 0 20px var(--red); border-color: #ff7b72; }
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
 
-        #debug { margin-top: 30px; font-family: monospace; font-size: 11px; color: #8b949e; border-top: 1px solid var(--border); padding-top: 10px; word-break: break-all; }
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .connection {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+            animation: blink 1s infinite;
+        }
+
+        .status-dot.connected {
+            background: #44ff44;
+            animation: none;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .led-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .led {
+            aspect-ratio: 1;
+            border-radius: 10px;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #666;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+
+        .led.active {
+            background: #ff4444;
+            color: white;
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.8), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .led-label {
+            font-size: 0.7em;
+            opacity: 0.7;
+        }
+
+        .reset-btn {
+            background: #ff6b6b;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .reset-btn:hover {
+            background: #ff5252;
+        }
+
+        .info-text {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.95em;
+        }
+
+        .data-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-family: monospace;
+        }
+
+        .data-log div {
+            padding: 5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .data-log div:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h1>REACTION DASHBOARD</h1>
-        <button id="btnConnect">PŘIPOJIT MICRO:BIT</button>
+        <header>
+            <h1>⚡ Micro:bit Reaction Time</h1>
+            <p>Statistiky vaší hry</p>
+        </header>
+
+        <div class="connection">
+            <div class="connection-status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Odpojeno</span>
+            </div>
+            <button id="connectBtn">Připojit USB</button>
+        </div>
 
         <div class="grid">
-            <div class="card"><span class="label">Poslední kolo</span><span id="vLast" class="val">--</span></div>
-            <div class="card"><span class="label">Průměr</span><span id="vAvg" class="val">--</span></div>
-            <div class="card"><span class="label">Nejrychlejší</span><span id="vMin" class="val" style="color:var(--green)">--</span></div>
-            <div class="card"><span class="label">Nejpomalejší</span><span id="vMax" class="val" style="color:var(--red)">--</span></div>
-        </div>
-
-        <div class="main-layout">
-            <div class="chart-box">
-                <canvas id="myChart"></canvas>
-            </div>
-            <div class="led-box">
-                <span class="label">Nejpomalejší LED</span>
-                <div class="led-grid">
-                    <div id="l0" class="led"></div><div id="l1" class="led"></div>
-                    <div id="l2" class="led"></div><div id="l3" class="led"></div>
+            <!-- STATISTIKY -->
+            <div class="card">
+                <h2>📊 Statistiky</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Průměr</div>
+                        <div class="stat-value" id="avgTime">-</div>
+                        <div style="font-size: 0.8em; color: #999;">ms</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Nejrychlejší</div>
+                        <div class="stat-value" id="minTime">-</div>
+                        <div style="font-size: 0.8em; color: #999;">ms</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Nejpomalejší</div>
+                        <div class="stat-value" id="maxTime">-</div>
+                        <div style="font-size: 0.8em; color: #999;">ms</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Kola</div>
+                        <div class="stat-value" id="rounds">0</div>
+                    </div>
                 </div>
-                <span id="ledDesc" style="color:var(--red); font-weight:bold; font-size:14px;">ČEKÁM NA DATA</span>
+            </div>
+
+            <!-- LEDky -->
+            <div class="card">
+                <h2>🔴 LEDky (Nejpomalejší zvýrazněna)</h2>
+                <div class="led-grid">
+                    <div class="led" id="led0">
+                        <div>LED 1<div class="led-label" id="ledTime0">-</div></div>
+                    </div>
+                    <div class="led" id="led1">
+                        <div>LED 2<div class="led-label" id="ledTime1">-</div></div>
+                    </div>
+                    <div class="led" id="led2">
+                        <div>LED 3<div class="led-label" id="ledTime2">-</div></div>
+                    </div>
+                    <div class="led" id="led3">
+                        <div>LED 4<div class="led-label" id="ledTime3">-</div></div>
+                    </div>
+                </div>
+                <button class="reset-btn" id="resetBtn">🔄 Reset dat</button>
             </div>
         </div>
 
-        <div id="debug">Poslední RAW data: Čekám na spárování...</div>
+        <!-- GRAF -->
+        <div class="card">
+            <h2>📈 Graf - Časy stisknutí</h2>
+            <div class="chart-container">
+                <canvas id="timeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- LOG -->
+        <div class="card">
+            <h2>📋 Log dat</h2>
+            <div class="data-log" id="dataLog">
+                <div>Čekání na připojení...</div>
+            </div>
+        </div>
+
+        <div class="info-text">
+            💡 Připojte micro:bit přes USB, klikněte na "Připojit USB" a začněte hrát!
+        </div>
     </div>
 
     <script>
-        let chart;
-        const ctx = document.getElementById('myChart').getContext('2d');
+        let port = null;
+        let reader = null;
+        let isConnected = false;
+        
+        // Data storage
+        let allTimes = [];
+        let ledTimes = [[], [], [], []];
+        let ledCounts = [0, 0, 0, 0];
 
-        // Nastavení grafu
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: { 
-                labels: ['1','2','3','4','5','6','7','8'], 
-                datasets: [{ label: 'ms', data: [], borderColor: '#58a6ff', tension: 0.3, fill: true, backgroundColor: 'rgba(88, 166, 255, 0.1)', borderWidth: 3 }] 
-            },
-            options: { 
-                maintainAspectRatio: false, 
-                scales: { 
-                    y: { beginAtZero: true, min: 0, grid: { color: '#30363d' }, ticks: { color: '#8b949e' } },
-                    x: { grid: { display: false }, ticks: { color: '#8b949e' } }
+        const connectBtn = document.getElementById('connectBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const dataLog = document.getElementById('dataLog');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let chart = null;
+
+        // Inicializace grafu
+        function initChart() {
+            const ctx = document.getElementById('timeChart').getContext('2d');
+            if (chart) chart.destroy();
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allTimes.map((_, i) => i + 1),
+                    datasets: [{
+                        label: 'Čas stisknutí (ms)',
+                        data: allTimes,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#667eea',
+                        pointHoverRadius: 7,
+                        borderWidth: 2
+                    }]
                 },
-                plugins: { legend: { display: false } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                font: { size: 12 }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' ms';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Aktualizace statistik
+        function updateStats() {
+            if (allTimes.length === 0) {
+                document.getElementById('avgTime').textContent = '-';
+                document.getElementById('minTime').textContent = '-';
+                document.getElementById('maxTime').textContent = '-';
+                document.getElementById('rounds').textContent = '0';
+                return;
+            }
+
+            const avg = Math.round(allTimes.reduce((a, b) => a + b, 0) / allTimes.length);
+            const min = Math.min(...allTimes);
+            const max = Math.max(...allTimes);
+
+            document.getElementById('avgTime').textContent = avg;
+            document.getElementById('minTime').textContent = min;
+            document.getElementById('maxTime').textContent = max;
+            document.getElementById('rounds').textContent = allTimes.length;
+
+            // Aktualizace LEDek
+            for (let i = 0; i < 4; i++) {
+                const ledAvg = ledCounts[i] > 0 
+                    ? Math.round(ledTimes[i].reduce((a, b) => a + b, 0) / ledCounts[i])
+                    : '-';
+                document.getElementById('ledTime' + i).textContent = ledAvg;
+            }
+
+            // Zvýraznění nejpomalejší LED
+            let slowestLed = -1;
+            let slowestTime = 0;
+            for (let i = 0; i < 4; i++) {
+                if (ledCounts[i] > 0) {
+                    const avg = ledTimes[i].reduce((a, b) => a + b, 0) / ledCounts[i];
+                    if (avg > slowestTime) {
+                        slowestTime = avg;
+                        slowestLed = i;
+                    }
+                }
+            }
+
+            // Odebrat aktivní třídu všem LEDkám
+            for (let i = 0; i < 4; i++) {
+                document.getElementById('led' + i).classList.remove('active');
+            }
+            // Přidat aktivní třídu nejpomalejší
+            if (slowestLed !== -1) {
+                document.getElementById('led' + slowestLed).classList.add('active');
+            }
+
+            if (chart) initChart();
+        }
+
+        // Přidání do logu
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString('cs-CZ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            dataLog.insertBefore(logEntry, dataLog.firstChild);
+            
+            // Omezit počet záznamů
+            while (dataLog.children.length > 20) {
+                dataLog.removeChild(dataLog.lastChild);
+            }
+        }
+
+        // Připojení k USB
+        connectBtn.addEventListener('click', async () => {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                isConnected = true;
+                connectBtn.textContent = 'Připojeno ✓';
+                connectBtn.disabled = true;
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Připojeno';
+                addLog('✅ Připojeno k micro:bitu!');
+                readSerial();
+            } catch (err) {
+                addLog('❌ Chyba připojení: ' + err.message);
             }
         });
 
-        document.getElementById('btnConnect').addEventListener('click', async () => {
+        // Čtení sériových dat
+        async function readSerial() {
             try {
-                const port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 115200 });
-                document.getElementById('btnConnect').innerText = "✅ PŘIPOJENO";
-                
-                const decoder = new TextDecoderStream();
-                port.readable.pipeTo(decoder.writable);
-                const reader = decoder.readable.getReader();
-                let buffer = "";
-
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    buffer += value;
-                    if (buffer.includes("\n")) {
-                        let lines = buffer.split("\n");
-                        for (let i = 0; i < lines.length - 1; i++) {
-                            if (lines[i].trim()) processLine(lines[i].trim());
+                while (port.readable && isConnected) {
+                    reader = port.readable.getReader();
+                    try {
+                        let buffer = '';
+                        while (true) {
+                            const { value, done } = await reader.read();
+                            if (done) break;
+                            
+                            const text = new TextDecoder().decode(value);
+                            buffer += text;
+                            
+                            // Zpracování řádků
+                            const lines = buffer.split('\n');
+                            buffer = lines.pop(); // Poslední neúplný řádek
+                            
+                            for (const line of lines) {
+                                const trimmed = line.trim();
+                                if (!trimmed) continue;
+                                
+                                // Parsování LED a času
+                                if (trimmed.startsWith('LED:') && trimmed.includes('TIME:')) {
+                                    const ledMatch = trimmed.match(/LED:(\d+)/);
+                                    const timeMatch = trimmed.match(/TIME:(\d+)/);
+                                    
+                                    if (ledMatch && timeMatch) {
+                                        const ledNum = parseInt(ledMatch[1]) - 1;
+                                        const time = parseInt(timeMatch[1]);
+                                        
+                                        if (ledNum >= 0 && ledNum < 4) {
+                                            allTimes.push(time);
+                                            ledTimes[ledNum].push(time);
+                                            ledCounts[ledNum]++;
+                                            
+                                            addLog(`🎯 LED ${ledNum + 1}: ${time}ms`);
+                                            updateStats();
+                                        }
+                                    }
+                                }
+                                // Parsování teploty
+                                else if (trimmed.startsWith('temp:')) {
+                                    const temp = trimmed.substring(5);
+                                    addLog(`🌡️ Teplota: ${temp}°C`);
+                                }
+                            }
                         }
-                        buffer = lines[lines.length - 1];
+                    } finally {
+                        reader.releaseLock();
                     }
                 }
-            } catch (err) { document.getElementById('debug').innerText = "Chyba: " + err; }
+            } catch (err) {
+                if (err.name !== 'NetworkError') {
+                    addLog('❌ Chyba čtení: ' + err.message);
+                }
+                isConnected = false;
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Odpojeno';
+                connectBtn.textContent = 'Připojit USB';
+                connectBtn.disabled = false;
+            }
+        }
+
+        // Reset dat
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Opravdu chcete smazat všechna data?')) {
+                allTimes = [];
+                ledTimes = [[], [], [], []];
+                ledCounts = [0, 0, 0, 0];
+                dataLog.innerHTML = '<div>Data resetována</div>';
+                updateStats();
+                addLog('🔄 Data resetována');
+            }
         });
 
-        function processLine(line) {
-            document.getElementById('debug').innerText = "Poslední RAW data: " + line;
-            if (!line.includes("DATA:")) return;
-
-            try {
-                // Rozsekání řádku přesně podle toho, co posílá Micro:bit
-                let dataPart = line.split("DATA:")[1].trim();
-                let sections = dataPart.split("|");
-                if (sections.length < 2) return;
-
-                // Vyčištění čísel (odstraní prázdné hodnoty a čárky navíc)
-                let stats = sections[0].split(",").map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-                let times = sections[1].split(",").map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-
-                if (stats.length >= 4) {
-                    document.getElementById('vLast').innerText = stats[0] + " ms";
-                    document.getElementById('vAvg').innerText = stats[1] + " ms";
-                    document.getElementById('vMin').innerText = stats[2] + " ms";
-                    document.getElementById('vMax').innerText = stats[3] + " ms";
-                }
-
-                if (stats.length >= 5) {
-                    for(let i=0; i<4; i++) document.getElementById('l'+i).classList.remove('bad');
-                    let badId = stats[4];
-                    if (badId >= 0 && badId <= 3) {
-                        document.getElementById('l'+badId).classList.add('bad');
-                        document.getElementById('ledDesc').innerText = "POZICE LED " + (badId + 1);
-                    }
-                }
-
-                if (times.length > 0) {
-                    chart.data.datasets[0].data = times;
-                    chart.update();
-                }
-            } catch (e) { console.error("Chyba:", e); }
-        }
+        // Inicializace
+        initChart();
+        updateStats();
     </script>
 </body>
 </html>
