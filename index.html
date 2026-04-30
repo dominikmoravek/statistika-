@@ -2,175 +2,115 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>REACTION DASHBOARD - Finální verze</title>
+    <title>Reaction System Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <style>
-        :root { --blue: #00d4ff; --green: #00ff41; --red: #ff3131; --bg: #0d1117; --card: #161b22; }
-        body { background: var(--bg); color: white; font-family: 'Rajdhani', sans-serif; margin: 0; padding-bottom: 50px; }
-        header { padding: 20px; border-bottom: 1px solid #30363d; text-align: center; }
-        h1 { font-family: 'Orbitron'; letter-spacing: 5px; color: var(--blue); margin: 0; }
+        body { background: #0d1117; color: #e6edf3; font-family: sans-serif; text-align: center; margin: 0; }
+        .container { max-width: 900px; margin: auto; padding: 20px; }
+        .grid { display: flex; gap: 15px; justify-content: center; margin: 20px 0; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; flex: 1; }
+        .val { font-size: 2em; font-weight: bold; color: #58a6ff; display: block; }
+        .label { font-size: 0.8em; color: #8b949e; text-transform: uppercase; }
         
-        .container { max-width: 1000px; margin: auto; padding: 20px; }
-        .stats-row { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .card { background: var(--card); border: 1px solid #30363d; padding: 15px; border-radius: 12px; flex: 1; min-width: 150px; text-align: center; transition: 0.3s; }
-        .card:hover { border-color: var(--blue); }
-        .label { color: #8b949e; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        .value { font-family: 'Orbitron'; font-size: 32px; margin: 5px 0; }
+        #chart-container { background: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 10px; height: 300px; margin-top: 20px; }
         
-        #val-last { color: #fff; } #val-avg { color: var(--blue); } 
-        #val-fast { color: var(--green); } #val-slow { color: var(--red); }
-
-        .main-content { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
-        .chart-container { background: var(--card); border: 1px solid #30363d; padding: 20px; border-radius: 12px; flex: 2; min-width: 300px; height: 350px; }
+        .led-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100px; margin: 20px auto; }
+        .led { width: 40px; height: 40px; background: #21262d; border: 2px solid #30363d; border-radius: 5px; }
+        .led.bad { background: #f85149; box-shadow: 0 0 15px #f85149; border-color: #ff7b72; }
         
-        .led-display { background: var(--card); border: 1px solid #30363d; padding: 20px; border-radius: 12px; flex: 1; min-width: 200px; text-align: center; }
-        .led-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 140px; margin: 30px auto; }
-        .led-dot { width: 50px; height: 50px; background: #222; border-radius: 10px; border: 2px solid #333; transition: 0.5s; position: relative; }
-        .led-dot::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 15px; height: 15px; background: #444; border-radius: 50%; }
-        
-        /* Styl pro špatnou LED */
-        .led-dot.active-bad { background: #400; border-color: var(--red); box-shadow: 0 0 30px var(--red); }
-        .led-dot.active-bad::after { background: var(--red); box-shadow: 0 0 10px white; }
-        
-        .btn { background: var(--blue); color: black; border: none; padding: 12px 30px; cursor: pointer; font-family: 'Orbitron'; border-radius: 5px; font-weight: bold; margin: 10px; transition: 0.3s; }
-        .btn:hover { background: white; transform: translateY(-2px); }
-        #debug { color: #444; font-size: 11px; margin-top: 30px; font-family: monospace; text-align: center; }
+        button { background: #238636; color: white; border: none; padding: 15px 30px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1.1em; }
+        button:hover { background: #2ea043; }
+        #debug { font-family: monospace; color: #8b949e; font-size: 0.7em; margin-top: 30px; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>REACTION SYSTEM</h1>
-        <button class="btn" id="connect">PŘIPOJIT PŘES USB</button>
-    </header>
-
     <div class="container">
-        <!-- Karty s výsledky -->
-        <div class="stats-row">
-            <div class="card"><div class="label">Poslední kolo</div><div class="value" id="val-last">0</div>ms</div>
-            <div class="card"><div class="label">Průměrný čas</div><div class="value" id="val-avg">0</div>ms</div>
-            <div class="card"><div class="label">Nejrychlejší</div><div class="value" id="val-fast">0</div>ms</div>
-            <div class="card"><div class="label">Nejpomalejší</div><div class="value" id="val-slow">0</div>ms</div>
+        <h1>REACTION DASHBOARD</h1>
+        <button id="btnConnect">PŘIPOJIT MICRO:BIT</button>
+
+        <div class="grid">
+            <div class="card"><span class="label">Poslední</span><span id="vLast" class="val">0</span>ms</div>
+            <div class="card"><span class="label">Průměr</span><span id="vAvg" class="val">0</span>ms</div>
+            <div class="card"><span class="label">Nejrychlejší</span><span id="vMin" class="val" style="color:#3fb950">0</span>ms</div>
+            <div class="card"><span class="label">Nejpomalejší</span><span id="vMax" class="val" style="color:#f85149">0</span>ms</div>
         </div>
 
-        <div class="main-content">
-            <!-- Graf reakcí -->
-            <div class="chart-container">
-                <canvas id="myChart"></canvas>
+        <div style="display:flex; gap:20px;">
+            <div id="chart-container" style="flex:3;">
+                <canvas id="reactionChart"></canvas>
             </div>
-
-            <!-- Vizualizace problémové LED -->
-            <div class="led-display">
-                <div class="label" style="font-weight: bold;">Nejpomalejší pozice</div>
+            <div class="card" style="flex:1;">
+                <span class="label">Nejhorší LED</span>
                 <div class="led-grid">
-                    <div class="led-dot" id="led-0" title="LED 1"></div>
-                    <div class="led-dot" id="led-1" title="LED 2"></div>
-                    <div class="led-dot" id="led-2" title="LED 3"></div>
-                    <div class="led-dot" id="led-3" title="LED 4"></div>
+                    <div id="l0" class="led"></div><div id="l1" class="led"></div>
+                    <div id="l2" class="led"></div><div id="l3" class="led"></div>
                 </div>
-                <div id="bad-led-text" style="font-size: 14px; color: var(--red); font-family: 'Orbitron';">PŘIPRAVENO</div>
+                <span id="ledDesc" style="font-size:0.8em; color:#8b949e;">---</span>
             </div>
         </div>
-        
-        <div id="debug">Status: Čekám na spárování s micro:bitem...</div>
+        <div id="debug">Status: Čekám na připojení...</div>
     </div>
 
     <script>
-        let lineBuffer = "";
-        const ctx = document.getElementById('myChart').getContext('2d');
-        
-        // Inicializace grafu - začíná v nule
-        const chart = new Chart(ctx, {
+        let chart;
+        const ctx = document.getElementById('reactionChart').getContext('2d');
+
+        // Inicializace grafu (začíná v nule)
+        chart = new Chart(ctx, {
             type: 'line',
             data: { 
-                labels: ['1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.'], 
-                datasets: [{ 
-                    label: 'Reakční čas (ms)', 
-                    data: [], 
-                    borderColor: '#00d4ff', 
-                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    pointBackgroundColor: '#fff',
-                    pointRadius: 5
-                }] 
+                labels: [1,2,3,4,5,6,7,8], 
+                datasets: [{ label: 'Reakce (ms)', data: [], borderColor: '#58a6ff', tension: 0.2, fill: true, backgroundColor: 'rgba(88, 166, 255, 0.1)' }] 
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                scales: { 
-                    y: { 
-                        min: 0, 
-                        beginAtZero: true, 
-                        grid: { color: '#222' }, 
-                        ticks: { color: '#8b949e', font: { family: 'Rajdhani' } } 
-                    },
-                    x: { 
-                        grid: { display: false }, 
-                        ticks: { color: '#8b949e', font: { family: 'Rajdhani' } } 
-                    }
-                },
-                plugins: {
-                    legend: { display: false }
-                }
-            }
+            options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, min: 0 } } }
         });
 
-        document.getElementById('connect').addEventListener('click', async () => {
+        document.getElementById('btnConnect').addEventListener('click', async () => {
             try {
                 const port = await navigator.serial.requestPort();
                 await port.open({ baudRate: 115200 });
-                document.getElementById('connect').innerText = "✅ PŘIPOJENO";
-                document.getElementById('debug').innerText = "Status: Připojeno. Odehraj 8 kol na micro:bitu.";
+                document.getElementById('btnConnect').innerText = "✅ PŘIPOJENO";
                 
                 const decoder = new TextDecoderStream();
                 port.readable.pipeTo(decoder.writable);
                 const reader = decoder.readable.getReader();
+                let buffer = "";
 
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    lineBuffer += value;
-                    if (lineBuffer.includes("\n")) {
-                        let lines = lineBuffer.split("\n");
-                        for (let i = 0; i < lines.length - 1; i++) {
-                            processLine(lines[i].trim());
-                        }
-                        lineBuffer = lines[lines.length - 1];
+                    buffer += value;
+                    if (buffer.includes("\n")) {
+                        let lines = buffer.split("\n");
+                        processLine(lines[lines.length - 2]); 
+                        buffer = lines[lines.length - 1];
                     }
                 }
-            } catch (err) {
-                document.getElementById('debug').innerText = "Chyba: " + err;
-            }
+            } catch (err) { document.getElementById('debug').innerText = "Chyba: " + err; }
         });
 
         function processLine(line) {
-            if (!line.startsWith("DATA:")) return;
-            document.getElementById('debug').innerText = "Data přijata, aktualizuji panel...";
+            let clean = line.trim();
+            document.getElementById('debug').innerText = "Poslední data: " + clean;
+            if (!clean.startsWith("DATA:")) return;
 
-            // Rozdělení na statistiky a časy grafu
-            // DATA:last,avg,min,max,badID|r1,r2,r3,r4,r5,r6,r7,r8
-            let parts = line.replace("DATA:", "").split("|");
-            let stats = parts[0].split(",").map(n => parseInt(n.trim()));
-            let reactions = parts[1].split(",").filter(v => v !== "").map(n => parseInt(n.trim()));
+            let mainParts = clean.replace("DATA:", "").split("|");
+            let stats = mainParts[0].split(",").map(Number);
+            let reactions = mainParts[1].split(",").filter(x => x !== "").map(Number);
 
-            // 1. Aktualizace karet
-            document.getElementById('val-last').innerText = stats[0];
-            document.getElementById('val-avg').innerText = stats[1];
-            document.getElementById('val-fast').innerText = stats[2];
-            document.getElementById('val-slow').innerText = stats[3];
+            // 1. Naplnění statistik
+            document.getElementById('vLast').innerText = stats[0];
+            document.getElementById('vAvg').innerText = stats[1];
+            document.getElementById('vMin').innerText = stats[2];
+            document.getElementById('vMax').innerText = stats[3];
 
-            // 2. Vizualizace LEDek
-            for (let i = 0; i < 4; i++) {
-                document.getElementById('led-' + i).classList.remove('active-bad');
-            }
-            let badID = stats[4];
-            if (badID >= 0 && badID <= 3) {
-                document.getElementById('led-' + badID).classList.add('active-bad');
-                document.getElementById('bad-led-text').innerText = "POZICE " + (badID + 1);
-            }
+            // 2. LED vizualizace
+            for(let i=0; i<4; i++) document.getElementById('l'+i).className = 'led';
+            let badId = stats[4];
+            document.getElementById('l'+badId).className = 'led bad';
+            document.getElementById('ledDesc').innerText = "LED Pozice " + (badId + 1);
 
-            // 3. Aktualizace grafu
+            // 3. Graf
             chart.data.datasets[0].data = reactions;
             chart.update();
         }
