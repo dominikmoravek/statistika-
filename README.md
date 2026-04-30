@@ -60,14 +60,12 @@
             border-radius: 15px;
             padding: 25px;
             text-align: center;
-            transition: transform 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s ease;
         }
 
         .card:hover {
-            transform: translateY(-5px);
             border-color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
         }
 
         .card h3 {
@@ -85,7 +83,7 @@
             font-family: 'Orbitron', sans-serif;
         }
 
-        #lastTimeValue { color: var(--neon-green); text-shadow: 0 0 15px rgba(0,255,65,0.4); }
+        #lastTimeValue { color: var(--neon-green); }
         #avgTimeValue { color: var(--neon-blue); }
 
         .chart-container {
@@ -115,23 +113,16 @@
             box-shadow: 0 0 20px var(--neon-blue);
         }
 
-        .status-dot {
-            height: 10px;
-            width: 10px;
-            background-color: #ff4136;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 10px;
-        }
-
-        .connected .status-dot { background-color: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); }
+        .status-info { margin-top: 10px; font-size: 14px; letter-spacing: 1px; }
+        .dot { height: 10px; width: 10px; background: #ff4136; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .connected .dot { background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
     </style>
 </head>
 <body>
 
 <header>
     <h1>REACTION <span style="color:white">PRO</span></h1>
-    <div id="statusInfo"><span class="status-dot"></span>ODPOJENO</div>
+    <div class="status-info" id="status"><span class="dot"></span>ODPOJENO</div>
     <button class="btn-connect" id="connectBtn">SPREGOVAT ZAŘÍZENÍ</button>
 </header>
 
@@ -139,17 +130,17 @@
     <div class="main-stats">
         <div class="card">
             <h3>Poslední Reakce</h3>
-            <div class="value" id="lastTimeValue">000</div>
+            <div class="value" id="lastTimeValue">0</div>
             <span style="color:#8b949e">ms</span>
         </div>
         <div class="card">
-            <h3>Průměrný Výkon</h3>
-            <div class="value" id="avgTimeValue">000</div>
+            <h3>Průměr Kola</h3>
+            <div class="value" id="avgTimeValue">0</div>
             <span style="color:#8b949e">ms</span>
         </div>
         <div class="card">
             <h3>Aktivní LED</h3>
-            <div class="value" id="activeLedValue" style="color: white;">-</div>
+            <div class="value" id="activeLedValue">-</div>
             <span style="color:#8b949e">ID kanálu</span>
         </div>
     </div>
@@ -163,6 +154,7 @@
     let times = [];
     let labels = [];
     let chart;
+    let lineBuffer = "";
 
     // Inicializace Grafu
     const ctx = document.getElementById('reactionChart').getContext('2d');
@@ -186,7 +178,7 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: false, grid: { color: '#30363d' }, ticks: { color: '#8b949e' } },
+                y: { grid: { color: '#30363d' }, ticks: { color: '#8b949e' } },
                 x: { grid: { display: false }, ticks: { color: '#8b949e' } }
             },
             plugins: { legend: { display: false } }
@@ -194,65 +186,68 @@
     });
 
     const connectBtn = document.getElementById('connectBtn');
-    let port;
 
     connectBtn.addEventListener('click', async () => {
-        port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 115200 });
-        document.body.classList.add('connected');
-        document.getElementById('statusInfo').innerHTML = '<span class="status-dot"></span>SYSTÉM AKTIVNÍ';
-        connectBtn.style.display = 'none';
-        readData();
+        try {
+            const port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 115200 });
+            
+            document.getElementById('status').parentElement.classList.add('connected');
+            document.getElementById('status').innerHTML = '<span class="dot"></span>SYSTÉM AKTIVNÍ';
+            connectBtn.style.display = 'none';
+
+            const decoder = new TextDecoderStream();
+            const inputClosed = port.readable.pipeTo(decoder.writable);
+            const inputStream = decoder.readable;
+            const reader = inputStream.getReader();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                handleData(value);
+            }
+        } catch (error) {
+            console.error("Chyba:", error);
+        }
     });
 
-    async function readData() {
-        const decoder = new TextDecoder();
-        while (port.readable) {
-            const reader = port.readable.getReader();
-            try {
-                let buffer = "";
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value);
-                    if (buffer.includes('\n')) {
-                        processLines(buffer);
-                        buffer = "";
-                    }
-                }
-            } finally { reader.releaseLock(); }
-        }
-    }
+    function handleData(chunk) {
+        lineBuffer += chunk;
+        let lines = lineBuffer.split("\r\n");
+        lineBuffer = lines.pop(); // Ponechá si rozpracovaný řádek
 
-    function processLines(text) {
-        const lines = text.split('\n');
         lines.forEach(line => {
-            if (line.includes('LED=')) {
-                const led = line.split('=')[1].trim();
-                document.getElementById('activeLedValue').innerText = led;
-            }
-            if (line.includes('TIME=')) {
-                const time = parseInt(line.split('=')[1].trim());
-                updateStats(time);
+            line = line.trim();
+            if (line.includes(':')) {
+                let [key, val] = line.split(':');
+                val = parseInt(val);
+
+                if (key === "LED") {
+                    document.getElementById('activeLedValue').innerText = val;
+                } else if (key === "TIME") {
+                    updateChart(val);
+                } else if (key === "AVG") {
+                    document.getElementById('avgTimeValue').innerText = val;
+                }
             }
         });
     }
 
-    function updateStats(newTime) {
+    function updateChart(newTime) {
         document.getElementById('lastTimeValue').innerText = newTime;
         
         times.push(newTime);
-        labels.push(times.length + ".");
+        labels.push(times.length);
         
-        if(times.length > 20) {
+        if(times.length > 15) {
             times.shift();
             labels.shift();
         }
 
-        const avg = Math.round(times.reduce((a, b) => a + b) / times.length);
-        document.getElementById('avgTimeValue').innerText = avg;
+        const currentAvg = Math.round(times.reduce((a, b) => a + b) / times.length);
+        document.getElementById('avgTimeValue').innerText = currentAvg;
 
-        chart.update();
+        chart.update('none'); // Rychlá aktualizace bez animace pro "speed" efekt
     }
 </script>
 </body>
