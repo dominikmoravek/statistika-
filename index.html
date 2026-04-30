@@ -309,6 +309,7 @@
         let port = null;
         let reader = null;
         let isConnected = false;
+        let buffer = '';
         
         // Data storage
         let allTimes = [];
@@ -445,6 +446,7 @@
                 connectBtn.disabled = true;
                 statusDot.classList.add('connected');
                 statusText.textContent = 'Připojeno';
+                dataLog.innerHTML = '';
                 addLog('✅ Připojeno k micro:bitu!');
                 readSerial();
             } catch (err) {
@@ -458,7 +460,6 @@
                 while (port.readable && isConnected) {
                     reader = port.readable.getReader();
                     try {
-                        let buffer = '';
                         while (true) {
                             const { value, done } = await reader.read();
                             if (done) break;
@@ -467,36 +468,33 @@
                             buffer += text;
                             
                             // Zpracování řádků
-                            const lines = buffer.split('\n');
-                            buffer = lines.pop(); // Poslední neúplný řádek
-                            
-                            for (const line of lines) {
-                                const trimmed = line.trim();
-                                if (!trimmed) continue;
+                            let newlineIndex;
+                            while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                                const line = buffer.substring(0, newlineIndex).trim();
+                                buffer = buffer.substring(newlineIndex + 1);
+                                
+                                if (!line) continue;
+                                
+                                console.log('Přijaté:', line);
                                 
                                 // Parsování LED a času
-                                if (trimmed.startsWith('LED:') && trimmed.includes('TIME:')) {
-                                    const ledMatch = trimmed.match(/LED:(\d+)/);
-                                    const timeMatch = trimmed.match(/TIME:(\d+)/);
+                                const ledMatch = line.match(/LED:(\d+)/);
+                                const timeMatch = line.match(/TIME:(\d+)/);
+                                
+                                if (ledMatch && timeMatch) {
+                                    const ledNum = parseInt(ledMatch[1]) - 1;
+                                    const time = parseInt(timeMatch[1]);
                                     
-                                    if (ledMatch && timeMatch) {
-                                        const ledNum = parseInt(ledMatch[1]) - 1;
-                                        const time = parseInt(timeMatch[1]);
+                                    console.log('LED:', ledNum + 1, 'Čas:', time);
+                                    
+                                    if (ledNum >= 0 && ledNum < 4) {
+                                        allTimes.push(time);
+                                        ledTimes[ledNum].push(time);
+                                        ledCounts[ledNum]++;
                                         
-                                        if (ledNum >= 0 && ledNum < 4) {
-                                            allTimes.push(time);
-                                            ledTimes[ledNum].push(time);
-                                            ledCounts[ledNum]++;
-                                            
-                                            addLog(`🎯 LED ${ledNum + 1}: ${time}ms`);
-                                            updateStats();
-                                        }
+                                        addLog(`🎯 LED ${ledNum + 1}: ${time}ms`);
+                                        updateStats();
                                     }
-                                }
-                                // Parsování teploty
-                                else if (trimmed.startsWith('temp:')) {
-                                    const temp = trimmed.substring(5);
-                                    addLog(`🌡️ Teplota: ${temp}°C`);
                                 }
                             }
                         }
@@ -506,6 +504,7 @@
                 }
             } catch (err) {
                 if (err.name !== 'NetworkError') {
+                    console.error('Chyba:', err);
                     addLog('❌ Chyba čtení: ' + err.message);
                 }
                 isConnected = false;
